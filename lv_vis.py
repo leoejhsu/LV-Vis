@@ -47,10 +47,10 @@ import numpy as np
 from vispy import scene, app
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt5.QtCore    import QTimer, Qt
-from src.CanvasSetting import CanvasManager, CameraController, AxisVisualizer
-from src.volSetting import MultiVolumeController
-from src.selectBox import VolumeSelector
-from src.controlPanel import ControlPanel
+from src.canvas_setting import CanvasManager, CameraController, AxisVisualizer
+from src.vol_setting import MultiVolumeController
+from src.select_box import VolumeSelector
+from src.control_panel import ControlPanel
 import argparse, tempfile, csv
 
 

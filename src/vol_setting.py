@@ -1,4 +1,4 @@
-# Volume Data Structure (aligned with volSetting.py)
+# Volume Data Structure (aligned with vol_setting.py)
 #
 # ├─ MultiVolumeController                          # Controller of multiple SingleVolumeLOD
 # │  ├─ view: SceneCanvas                           # Interactive (main) canvas

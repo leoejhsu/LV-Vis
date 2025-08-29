@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+*.log
+
+# Jupyter / cache
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+*.npy
+*.tif
+*.tiff
+*.ome.tiff
+
+# Virtual env
+.venv/
+env/
+venv/

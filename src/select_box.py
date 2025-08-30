@@ -11,7 +11,12 @@ class VolumeSelector:
         self.canvas = canvas
         self.shape = shape
         self.view = view
-        self.color_texture = gloo.Texture2D(shape=(w, h) + (4,), format='rgba')
+
+        ps = self.canvas.pixel_scale
+        w_log, h_log = self.canvas.size
+        tex_w, tex_h = int(w_log * ps), int(h_log * ps)
+
+        self.color_texture = gloo.Texture2D(shape=(tex_h, tex_w, 4), format='rgba')
         self.fbo = gloo.FrameBuffer(color=self.color_texture, depth=None)
         self.voxel = None
         self.selected_index = None
@@ -21,8 +26,9 @@ class VolumeSelector:
         self._global_box = [None] * 5
 
     def handle_click(self, x, y, w, h, pos_visuals, shapes, transforms):
-
-
+        if self.color_texture.shape[0] != h or self.color_texture.shape[1] != w:
+            self.color_texture = gloo.Texture2D(shape=(h, w, 4), format='rgba')
+            self.fbo = gloo.FrameBuffer(color=self.color_texture, depth=None)
         best_index = -1
         best_val = -1
         best_vector = None

@@ -311,13 +311,14 @@ class LVVisWindow(QMainWindow):
         loaders = list(self.controller.volumes.values())
 
         if all(self.controller.current_layer < ldr.max_level for ldr in loaders):
-            x, y = int(event.pos[0]), int(event.pos[1])
+            ps = self.canvas_manager.canvas.pixel_scale
+            x = int(event.pos[0] * ps)
+            y = int(event.pos[1] * ps)
             self.pending_click = (x, y)
             self.canvas_manager.canvas.update()
         else:
-            print(f'Reached maximum LOD depth (current={self.controller.current_layer}')
+            print(f'Reached maximum LOD depth (current={self.controller.current_layer})')  # ★ 順便補上右括號
             return
-
 
     def on_draw(self, event):
         if not self.ctrl_pressed or self.pending_click is None:
@@ -327,7 +328,6 @@ class LVVisWindow(QMainWindow):
 
         lvl = self.controller.current_layer
         loaders = list(self.controller.volumes.values())
-        # Prepare visuals & pos_visuals for picking
         visuals = [ldr.volume_visuals for ldr in loaders]
         pos_visuals = [ldr.volume_pos_visuals for ldr in loaders]
         factor = loaders[0].factor[lvl]
@@ -335,21 +335,25 @@ class LVVisWindow(QMainWindow):
         shapes = [(ldr.vol_size).astype(int) for ldr in loaders]
         print(f'[on_draw] shapes', shapes)
         translates = [np.array(vis.transform.translate) for vis in visuals]
-        # print(translates)
         print(f'[on_draw] translates', translates)
 
+        # ★ Retina：把邏輯寬高 → 實體寬高
+        ps = self.canvas_manager.canvas.pixel_scale
+        fb_w = int(self.w * ps)
+        fb_h = int(self.h * ps)
+
         idx, vec = self.selector.handle_click(
-            x, y, self.w, self.h,
+            x, y, fb_w, fb_h,
             pos_visuals=pos_visuals,
             shapes=shapes,
             transforms=translates
         )
         print(f"idx: {idx}, vec: {vec}")
         if idx is not None:
-            t = np.array((loaders[idx].raw_positions + loaders[idx].translations + loaders[idx].vol_global_start_point[lvl]))
-            self.selector.draw_box(
-                vec, t/factor
-            )
+            t = np.array(
+                loaders[idx].raw_positions + loaders[idx].translations + loaders[idx].vol_global_start_point[lvl])
+            self.selector.draw_box(vec, t / factor)
+
         self.canvas_manager.canvas.update()
 
     def _highlight_selected(self):
@@ -469,7 +473,6 @@ class LVVisWindow(QMainWindow):
 
 
 def _make_temp_csv_single(folder: str, coords=(0, 0, 0)) -> str:
-    """為單一資料夾動態建立一個 4 欄 CSV：path,x,y,z"""
     fd, path = tempfile.mkstemp(prefix="single_", suffix=".csv")
     os.close(fd)
     with open(path, "w", newline="") as f:

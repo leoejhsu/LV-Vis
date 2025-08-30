@@ -337,7 +337,6 @@ class LVVisWindow(QMainWindow):
         translates = [np.array(vis.transform.translate) for vis in visuals]
         print(f'[on_draw] translates', translates)
 
-        # ★ Retina：把邏輯寬高 → 實體寬高
         ps = self.canvas_manager.canvas.pixel_scale
         fb_w = int(self.w * ps)
         fb_h = int(self.h * ps)

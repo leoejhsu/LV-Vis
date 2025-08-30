@@ -14,8 +14,19 @@ An open-source framework for **multi-resolution 3D volume visualization** built 
 
 ## Installation
 
-We recommend using Python ≥ 3.10 with a virtual environment:
+We recommend using Python ≥ 3.10 with a virtual environment.
 
+You can choose either Conda or venv:
+
+### Option 1: Conda 
+```bash
+conda create -n lvvis python=3.10 -y
+conda activate lvvis
+
+pip install -r requirements.txt
+```
+
+### Option 2: venv
 ```bash
 python -m venv venv
 source venv/bin/activate   # Linux / macOS

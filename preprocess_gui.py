@@ -118,7 +118,8 @@ class Worker(QThread):
                             progress_cb=lambda p: self.progress.emit(max(20, min(99, p))),
                             stage_cb=lambda s: self.stage.emit(f"[{idx + 1}/{total}] {s}"),
                             abort_cb=lambda: self._abort,
-                            lod_name=self.lod_name
+                            lod_name=self.lod_name,
+                            min_size=self.custom_min_size
                         )
                     else:
                         parent_dir = os.path.dirname(folder_or_stack)
@@ -127,7 +128,8 @@ class Worker(QThread):
                             progress_cb=lambda p: self.progress.emit(max(20, min(99, p))),
                             stage_cb=lambda s: self.stage.emit(f"[{idx + 1}/{total}] {s}"),
                             abort_cb=lambda: self._abort,
-                            lod_name=self.lod_name
+                            lod_name=self.lod_name,
+                            min_size=self.custom_min_size
                         )
             elif mode == "FOLDER":
                 oneVolProcessing(
@@ -135,7 +137,8 @@ class Worker(QThread):
                     progress_cb=lambda p: self.progress.emit(max(20, min(99, p))),
                     stage_cb=lambda s: self.stage.emit(s),
                     abort_cb=lambda: self._abort,
-                    lod_name=self.lod_name
+                    lod_name=self.lod_name,
+                    min_size=self.custom_min_size
                 )
             elif mode == "TIFF":
                 parent_dir = os.path.dirname(self.file_path)
@@ -144,7 +147,8 @@ class Worker(QThread):
                     progress_cb=lambda p: self.progress.emit(max(20, min(99, p))),
                     stage_cb=lambda s: self.stage.emit(s),
                     abort_cb=lambda: self._abort,
-                    lod_name=self.lod_name
+                    lod_name=self.lod_name,
+                    min_size=self.custom_min_size
                 )
             else:
                 raise ValueError("Unsupported input mode")

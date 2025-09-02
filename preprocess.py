@@ -305,7 +305,7 @@ def compute_maximum_level(image_3d_shape, min_size=100):
 
 def oneVolProcessing(file_path, dtype=None, stack_path=None,
                      progress_cb=None, stage_cb=None, abort_cb=None,
-                     lod_name="LOD_Data"):   # 👈 增加可傳入的 LOD 資料夾名稱
+                     lod_name="LOD_Data", min_size=100):   # 👈 增加可傳入的 LOD 資料夾名稱
     """Process one volume folder or one stack into an LOD directory.
 
     Parameters
@@ -350,7 +350,7 @@ def oneVolProcessing(file_path, dtype=None, stack_path=None,
         print('using dtype:', dtype)
 
         # calculate LOD layer ===
-        maximum_level = compute_maximum_level(image_3d_shape)
+        maximum_level = compute_maximum_level(image_3d_shape, min_size=min_size)
         print('maximum_level: ', maximum_level)
 
         pad_image_shape = np.ceil(np.array(image_3d_shape) / (2 ** maximum_level)).astype(np.int64)
@@ -410,6 +410,7 @@ if __name__ == "__main__":
     parser.add_argument("file_path", help="Path to .csv, folder of TIFFs, or single 3D TIFF stack")
     parser.add_argument("--dtype", default="uint16", choices=["uint16", "float32"],
                         help="Data type to use for processing (default: uint16)")
+    parser.add_argument("--min-size", type=int, default=100, help="min size used for LOD estimation (default: 100)")
     args = parser.parse_args()
 
     dtype = getattr(np, args.dtype)

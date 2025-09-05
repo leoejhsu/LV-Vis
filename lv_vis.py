@@ -52,7 +52,8 @@ from src.vol_setting import MultiVolumeController
 from src.select_box import VolumeSelector
 from src.control_panel import ControlPanel
 import argparse, tempfile, csv
-
+import time
+import psutil
 
 class LVVisWindow(QMainWindow):
     def __init__(self, csv_path: str, w: int = 1200, h: int = 1200):
@@ -371,103 +372,150 @@ class LVVisWindow(QMainWindow):
         self.canvas_manager.canvas.update()
 
     def _drill_overlaps(self, threshold: float = 0.25):
-        lvl = self.controller.current_layer
-        loaders = list(self.controller.volumes.values())
+        t0 = time.perf_counter()
+        m0 = _mem_snapshot()
+        try:
+            lvl = self.controller.current_layer
+            loaders = list(self.controller.volumes.values())
 
-        # --- Step 1: Extract box_s, box_e (layer L voxel index) ---
-        box_s_layer = self.selector.box_start  # np.ndarray([z, y, x])
-        box_e_layer = self.selector.box_end  # np.ndarray([z, y, x])
-        print("\n=== [_drill_overlaps] Level =", lvl)
-        print(f"[_drill_overlaps] 1) User ROI box (Z,Y,X) Layer-{lvl} index → "
-              f"box_s_layer = {box_s_layer}, box_e_layer = {box_e_layer}")
+            # --- Step 1: Extract box_s, box_e (layer L voxel index) ---
+            box_s_layer = self.selector.box_start  # np.ndarray([z, y, x])
+            box_e_layer = self.selector.box_end  # np.ndarray([z, y, x])
+            print("\n=== [_drill_overlaps] Level =", lvl)
+            print(f"[_drill_overlaps] 1) User ROI box (Z,Y,X) Layer-{lvl} index → "
+                  f"box_s_layer = {box_s_layer}, box_e_layer = {box_e_layer}")
 
-        any_overlap = False  # Set True if at least one loader overlaps
+            any_overlap = False  # Set True if at least one loader overlaps
 
-        for i, ldr in enumerate(loaders):
-            if ldr.volume_visuals:
-                ldr.volume_visuals.parent = None
-            print(f"[_drill_overlaps] \n--- Processing loader id = {ldr.id} (#{i}) ---")
-            volMaximum = ldr.vol_size * ldr.factor[0]
-            factor = ldr.factor[lvl]
-            print(f'[_drill_overlaps] Factor = {factor}')
+            for i, ldr in enumerate(loaders):
+                if ldr.volume_visuals:
+                    ldr.volume_visuals.parent = None
+                print(f"[_drill_overlaps] \n--- Processing loader id = {ldr.id} (#{i}) ---")
+                volMaximum = ldr.vol_size * ldr.factor[0]
+                factor = ldr.factor[lvl]
+                print(f'[_drill_overlaps] Factor = {factor}')
 
-            # --- Step 2: Convert box indices at layer L → global voxel coords at original resolution ---
-            box_s_global = box_s_layer * factor
-            box_e_global = box_e_layer * factor
-            print(f"[_drill_overlaps] 2) box_s_global (Layer {lvl} → global coords) = {box_s_global}")
-            print(f"[_drill_overlaps]    box_e_global (Layer {lvl} → global coords) = {box_e_global}")
+                # --- Step 2: Convert box indices at layer L → global voxel coords at original resolution ---
+                box_s_global = box_s_layer * factor
+                box_e_global = box_e_layer * factor
+                print(f"[_drill_overlaps] 2) box_s_global (Layer {lvl} → global coords) = {box_s_global}")
+                print(f"[_drill_overlaps]    box_e_global (Layer {lvl} → global coords) = {box_e_global}")
 
-            # --- Step 3: Compute this loader's global range at original resolution ---
-            raw_global = ldr.vol_global_start_point[lvl] + (ldr.raw_positions + ldr.translations)
-            print(f"[_drill_overlaps] 3) raw_global (Layer {lvl}, loader {ldr.id} "
-                  f"= start_point + raw_positions + translations) = {raw_global}")
-            print(ldr.vol_global_start_point[lvl], ldr.raw_positions, ldr.translations)
+                # --- Step 3: Compute this loader's global range at original resolution ---
+                raw_global = ldr.vol_global_start_point[lvl] + (ldr.raw_positions + ldr.translations)
+                print(f"[_drill_overlaps] 3) raw_global (Layer {lvl}, loader {ldr.id} "
+                      f"= start_point + raw_positions + translations) = {raw_global}")
+                print(ldr.vol_global_start_point[lvl], ldr.raw_positions, ldr.translations)
 
-            vol_s_global = raw_global.copy()
-            vol_e_global = np.minimum(raw_global + ldr.vol_size * factor,
-                                      volMaximum + ldr.raw_positions)
-            print(f"[_drill_overlaps]    vol_s_global (global start) = {vol_s_global}")
-            print(f"[_drill_overlaps]    vol_e_global (global end)   = {vol_e_global}")
+                vol_s_global = raw_global.copy()
+                vol_e_global = np.minimum(raw_global + ldr.vol_size * factor,
+                                          volMaximum + ldr.raw_positions)
+                print(f"[_drill_overlaps]    vol_s_global (global start) = {vol_s_global}")
+                print(f"[_drill_overlaps]    vol_e_global (global end)   = {vol_e_global}")
 
-            # --- Step 4: Check overlap in global voxel coordinates ---
-            ov_s_global = np.maximum(vol_s_global, box_s_global)
-            ov_e_global = np.minimum(vol_e_global, box_e_global)
-            print(f"[_drill_overlaps] 4) ov_s_global = max(vol_s_global, box_s_global) = {ov_s_global}")
-            print(f"[_drill_overlaps]    ov_e_global = min(vol_e_global, box_e_global) = {ov_e_global}")
+                # --- Step 4: Check overlap in global voxel coordinates ---
+                ov_s_global = np.maximum(vol_s_global, box_s_global)
+                ov_e_global = np.minimum(vol_e_global, box_e_global)
+                print(f"[_drill_overlaps] 4) ov_s_global = max(vol_s_global, box_s_global) = {ov_s_global}")
+                print(f"[_drill_overlaps]    ov_e_global = min(vol_e_global, box_e_global) = {ov_e_global}")
 
-            if np.all(ov_s_global < ov_e_global):
-                any_overlap = True
-                print("[_drill_overlaps]    → Overlap detected. Proceeding to next-level extraction")
-                # --- Step 5: Compute extraction center (center_local) ---
-                mid_global = ov_s_global + ((ov_e_global - ov_s_global) // 2)
-                print(f"[_drill_overlaps] 5) mid_global (intersection center, global) = {mid_global}")
+                if np.all(ov_s_global < ov_e_global):
+                    any_overlap = True
+                    print("[_drill_overlaps]    → Overlap detected. Proceeding to next-level extraction")
+                    # --- Step 5: Compute extraction center (center_local) ---
+                    mid_global = ov_s_global + ((ov_e_global - ov_s_global) // 2)
+                    print(f"[_drill_overlaps] 5) mid_global (intersection center, global) = {mid_global}")
 
-                mid_layer = (mid_global // factor).astype(int)
-                print(f"[_drill_overlaps]    mid_layer = {mid_layer} (Layer {lvl} voxel index)")
+                    mid_layer = (mid_global // factor).astype(int)
+                    print(f"[_drill_overlaps]    mid_layer = {mid_layer} (Layer {lvl} voxel index)")
 
-                local_offset = ((ldr.raw_positions + ldr.translations +
-                                 ldr.vol_global_start_point[lvl]) // factor).astype(int)
-                print(f"[_drill_overlaps]    local_offset = "
-                      f"(raw_positions + translations + vol_global_start_point) // factor = {local_offset}")
+                    local_offset = ((ldr.raw_positions + ldr.translations +
+                                     ldr.vol_global_start_point[lvl]) // factor).astype(int)
+                    print(f"[_drill_overlaps]    local_offset = "
+                          f"(raw_positions + translations + vol_global_start_point) // factor = {local_offset}")
 
-                center_local = (mid_layer - local_offset).astype(int)
-                print(f"[_drill_overlaps] 6) center_local (coordinate for extract_next) = {center_local}")
+                    center_local = (mid_layer - local_offset).astype(int)
+                    print(f"[_drill_overlaps] 6) center_local (coordinate for extract_next) = {center_local}")
 
-                subvol = ldr.extract_next(center_local, lvl)
-                print(f"[_drill_overlaps] 7) Extracted subvol, shape = {subvol.shape}")
+                    subvol = ldr.extract_next(center_local, lvl)
+                    print(f"[_drill_overlaps] 7) Extracted subvol, shape = {subvol.shape}")
 
-                ldr.render_level(lvl + 1, self.view, threshold=threshold)
+                    ldr.render_level(lvl + 1, self.view, threshold=threshold)
+                else:
+                    print("[_drill_overlaps]    → No overlap, skipping this loader")
+
+            # --- Final Step: If any overlap found, update layer and redraw ---
+            if any_overlap:
+                print(f"\n[_drill_overlaps] Updating controller.current_layer: {lvl} → {lvl + 1}\n")
+                self.controller.current_layer += 1
+                self._recenter_camera_on_volumes()
+                self.canvas_manager.canvas.update()
+                self.ctrl_panel.refresh_current()
             else:
-                print("[_drill_overlaps]    → No overlap, skipping this loader")
+                print("\n[_drill_overlaps] >>> No overlaps. Layer not updated, no redraw <<<\n")
 
-        # --- Final Step: If any overlap found, update layer and redraw ---
-        if any_overlap:
-            print(f"\n[_drill_overlaps] Updating controller.current_layer: {lvl} → {lvl + 1}\n")
-            self.controller.current_layer += 1
-            self._recenter_camera_on_volumes()
-            self.canvas_manager.canvas.update()
-            self.ctrl_panel.refresh_current()
-        else:
-            print("\n[_drill_overlaps] >>> No overlaps. Layer not updated, no redraw <<<\n")
-
+        finally:
+            t1 = time.perf_counter()
+            m1 = _mem_snapshot()
+            _print_perf_report("drill_overlaps", t0, m0, t1, m1)
 
     def _reload_layer(self):
+        t0 = time.perf_counter()
+        m0 = _mem_snapshot()
+        try:
+            self.controller.current_layer -= 1
+            lvl = self.controller.current_layer
+            self.selector._removeGlobalBox(lvl)
+            self.selector._reload_global(self.global_view, lvl-1)
 
-        self.controller.current_layer -= 1
-        lvl = self.controller.current_layer
-        self.selector._removeGlobalBox(lvl)
-        self.selector._reload_global(self.global_view, lvl-1)
+            loaders = list(self.controller.volumes.values())
+            for i, ldr in enumerate(loaders):
+                print('[_reload_layer] volume ',i, f'in level {lvl+1} trasforms', ldr.volume_visuals.transform)
+                # ldr.volumes[lvl+1] = None
+                ldr.free_level(lvl + 1)
+                ldr.render_level(lvl, self.view)
+                self._recenter_camera_on_volumes()
+                self.ctrl_panel.refresh_current()
+                print('[_reload_layer] volume ',i, f'in level {lvl} trasforms', ldr.volume_visuals.transform)
 
-        loaders = list(self.controller.volumes.values())
-        for i, ldr in enumerate(loaders):
-            print('[_reload_layer] volume ',i, f'in level {lvl+1} trasforms', ldr.volume_visuals.transform)
-            # ldr.volumes[lvl+1] = None
-            ldr.free_level(lvl + 1)
-            ldr.render_level(lvl, self.view)
-            self._recenter_camera_on_volumes()
-            self.ctrl_panel.refresh_current()
-            print('[_reload_layer] volume ',i, f'in level {lvl} trasforms', ldr.volume_visuals.transform)
-        pass
+        finally:
+            t1 = time.perf_counter()
+            m1 = _mem_snapshot()
+            _print_perf_report("reload_layer", t0, m0, t1, m1)
+
+def _mem_snapshot():
+    process = psutil.Process(os.getpid())
+    mi = process.memory_info()
+    rss_mb = mi.rss / (1024 ** 2)
+    vms_mb = mi.vms / (1024 ** 2)
+    gpu_used_mb = None
+    try:
+        import pynvml
+        try:
+            pynvml.nvmlInit()
+        except Exception:
+            pass
+        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        gpu_used_mb = mem.used / (1024 ** 2)
+    except Exception:
+        gpu_used_mb = None
+
+    return {"rss_mb": rss_mb, "vms_mb": vms_mb, "gpu_mb": gpu_used_mb}
+
+def _print_perf_report(label, t0, m0, t1, m1):
+    dt = (t1 - t0) * 1000.0  # ms
+    drss = m1["rss_mb"] - m0["rss_mb"]
+    dvms = m1["vms_mb"] - m0["vms_mb"]
+    if (m0["gpu_mb"] is not None) and (m1["gpu_mb"] is not None):
+        dgpu = m1["gpu_mb"] - m0["gpu_mb"]
+        gpu_line = f", GPU Δused = {dgpu:+.1f} MB (→ {m1['gpu_mb']:.1f} MB)"
+    else:
+        gpu_line = ""
+    print(
+        f"[PERF] {label}: {dt:.1f} ms | RAM ΔRSS = {drss:+.1f} MB (→ {m1['rss_mb']:.1f} MB), "
+        f"ΔVMS = {dvms:+.1f} MB (→ {m1['vms_mb']:.1f} MB){gpu_line}"
+    )
 
 
 

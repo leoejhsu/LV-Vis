@@ -24,6 +24,14 @@ class VolumeSelector:
         self.box_start = None
         self.box_end = None
         self._global_box = [None] * 5
+        # actual roi
+        self._actual_roi_global_by_level = [None] * 5
+
+    def set_actual_roi_global(self, lvl: int, gs, ge):
+        gs = np.asarray(gs, dtype=float)
+        ge = np.asarray(ge, dtype=float)
+        self._actual_roi_global_by_level[lvl] = (gs, ge)
+
 
     def handle_click(self, x, y, w, h, pos_visuals, shapes, transforms):
         if self.color_texture.shape[0] != h or self.color_texture.shape[1] != w:
@@ -154,49 +162,123 @@ class VolumeSelector:
             self.voxel.parent = None
             self.voxel = None
 
-    def draw_box_in_global(self, gview, f, lvl):
+    # def draw_box_in_global(self, gview, f, lvl):
+    #     max_f = f[0]
+    #     f = f[lvl]
+    #
+    #     # Remove existing global boxes
+    #     for _global_box in self._global_box:
+    #         if _global_box:
+    #             _global_box.parent = None
+    #
+    #     # 1) Convert box_start/end back to original-resolution global voxel coordinates
+    #     gs = np.array(self.box_start) * f
+    #     ge = np.array(self.box_end) * f
+    #
+    #     print(f"[VolumeSelector] box_start (pre original-res scaling): {self.box_start}")
+    #     print(f"[VolumeSelector] box_end   (pre original-res scaling): {self.box_end}")
+    #     print(f"[VolumeSelector] factor f: {f}")
+    #     print(f"[VolumeSelector] gs (global start, original-res): {gs}")
+    #     print(f"[VolumeSelector] ge (global end,   original-res): {ge}")
+    #
+    #     # 2) Compute center and half-extent (in original resolution)
+    #     center = (gs + ge) / 2.0
+    #     half = (ge - gs) / 2.0
+    #
+    #     print(f"[VolumeSelector] center (global center [z, y, x]): {center}")
+    #     print(f"[VolumeSelector] half   (half-extent [z/2, y/2, x/2]): {half}")
+    #
+    #     # 3) Create Box visual
+    #     size = (np.array(half) * 2 / max_f)[::-1]
+    #     print(f"[VolumeSelector] box size (width, height, depth) = {size}")
+    #     color = (0., 0., 0., 1.0)
+    #     box = Box(size[0], size[2], size[1],
+    #               color=color,
+    #               edge_color='yellow')
+    #
+    #     # 4) Set GL state and parent
+    #     box.set_gl_state(blend=True, blend_equation='max',
+    #                      blend_func=('one', 'one'),
+    #                      line_width=6.0, depth_test=False)
+    #     box.parent = gview.scene
+    #
+    #     # 5) Translate to global position (scaled to the overview canvas space)
+    #     tx, ty, tz = center[::-1] / max_f
+    #     print(f"[VolumeSelector] translate = (tx, ty, tz) = ({tx}, {ty}, {tz})")
+    #     box.transform = STTransform(translate=(tx, ty, tz))
+    #
+    #     self._global_box[lvl] = box
+    def draw_box_in_global(self, gview, f, globox_in_ldr, lvl):
+        """
+        globox_in_ldr: list of [start, end] for each loader,
+                       start/end are global original-res coords in (Z, Y, X).
+                       例如: [[gs0, ge0], [gs1, ge1], ...]
+        f: factor list (傳 loaders[0].factor)
+        """
         max_f = f[0]
-        f = f[lvl]
 
-        # Remove existing global boxes
+        # 0) 移除舊的 global boxes
+        # for i, _global_box in enumerate(self._global_box):
+        #     if _global_box:
+        #         _global_box.parent = None
+        #         self._global_box[i] = None
         for _global_box in self._global_box:
             if _global_box:
                 _global_box.parent = None
 
-        # 1) Convert box_start/end back to original-resolution global voxel coordinates
-        gs = np.array(self.box_start) * f
-        ge = np.array(self.box_end) * f
+        if not globox_in_ldr or len(globox_in_ldr) == 0:
+            print("[VolumeSelector] draw_box_in_global: no ROIs provided; skip.")
+            return
 
-        print(f"[VolumeSelector] box_start (pre original-res scaling): {self.box_start}")
-        print(f"[VolumeSelector] box_end   (pre original-res scaling): {self.box_end}")
-        print(f"[VolumeSelector] factor f: {f}")
-        print(f"[VolumeSelector] gs (global start, original-res): {gs}")
-        print(f"[VolumeSelector] ge (global end,   original-res): {ge}")
+        cleaned = []
+        for i, pair in enumerate(globox_in_ldr):
+            if pair is None or len(pair) != 2:
+                continue
+            gs = np.asarray(pair[0], dtype=float)
+            ge = np.asarray(pair[1], dtype=float)
 
-        # 2) Compute center and half-extent (in original resolution)
-        center = (gs + ge) / 2.0
-        half = (ge - gs) / 2.0
+            if gs.shape[-1] >= 4:
+                gs = gs[:3]
+            if ge.shape[-1] >= 4:
+                ge = ge[:3]
 
-        print(f"[VolumeSelector] center (global center [z, y, x]): {center}")
-        print(f"[VolumeSelector] half   (half-extent [z/2, y/2, x/2]): {half}")
+            if np.any(ge <= gs):
+                print(f"[VolumeSelector] skip invalid ROI[{i}] start={gs} end={ge}")
+                continue
 
-        # 3) Create Box visual
-        size = (np.array(half) * 2 / max_f)[::-1]
-        print(f"[VolumeSelector] box size (width, height, depth) = {size}")
+            cleaned.append((gs, ge))
+            print(f"[SelectionBox] ROI[{i}] start={gs.astype(int)} end={ge.astype(int)} "
+                  f"size={(ge - gs).astype(int)}")
+
+        if not cleaned:
+            print("[VolumeSelector] draw_box_in_global: no valid ROIs after cleaning; skip.")
+            return
+
+        union_gs = cleaned[0][0].copy()
+        union_ge = cleaned[0][1].copy()
+        for gs, ge in cleaned[1:]:
+            union_gs = np.minimum(union_gs, gs)
+            union_ge = np.maximum(union_ge, ge)
+
+        union_size_zyx = union_ge - union_gs
+        if np.any(union_size_zyx <= 0):
+            print(f"[VolumeSelector] union ROI is empty: start={union_gs}, end={union_ge}; skip.")
+            return
+
+        print(f"[SelectionBox] UNION start={union_gs.astype(int)} end={union_ge.astype(int)} "
+              f"size={(union_size_zyx).astype(int)}")
+
+        center_zyx = (union_gs + union_ge) / 2.0
+        size_overview_xyz = (union_size_zyx / max_f)[::-1]  # (X, Y, Z)
+        tx, ty, tz = (center_zyx[::-1] / max_f)  # (X, Y, Z)
+
         color = (0., 0., 0., 1.0)
-        box = Box(size[0], size[2], size[1],
-                  color=color,
-                  edge_color='yellow')
-
-        # 4) Set GL state and parent
+        box = Box(size_overview_xyz[0], size_overview_xyz[2], size_overview_xyz[1],
+                  color=color, edge_color='yellow')
         box.set_gl_state(blend=True, blend_equation='max',
                          blend_func=('one', 'one'),
                          line_width=6.0, depth_test=False)
         box.parent = gview.scene
-
-        # 5) Translate to global position (scaled to the overview canvas space)
-        tx, ty, tz = center[::-1] / max_f
-        print(f"[VolumeSelector] translate = (tx, ty, tz) = ({tx}, {ty}, {tz})")
         box.transform = STTransform(translate=(tx, ty, tz))
 
         self._global_box[lvl] = box

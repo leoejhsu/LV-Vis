@@ -111,12 +111,14 @@ class SingleVolumeLOD:
         self.volumes                  = None             # List[np.ndarray | None] per level
         self.local_positions          = None             # Reserved for per-level local offsets
 
+        self.vol_global_end_point = None  # List[np.ndarray] per level (global ends)
 
     def load_level0(self, path, level=0):
         self.max_level = get_max_lod_level(path)
         print('[SingleVolumeLOD] max level', self.max_level)
 
         self.vol_global_start_point = [np.zeros(3, dtype=int) for _ in range(self.max_level + 1)]
+        self.vol_global_end_point = [np.zeros(3, dtype=int) for _ in range(self.max_level + 1)]
         self.volumes              = [None] * (self.max_level+1)
         self.local_positions      = [None] * (self.max_level+1)
         self.factor = [2**(self.max_level-i) for i in range(self.max_level+1)]
@@ -157,7 +159,12 @@ class SingleVolumeLOD:
                 self.volume_pos_visuals.parent = None
 
         # 2) calculate positions
+
         data = self.volumes[level]
+        assert data is not None, "[render_level] data is None"
+        print(
+            f"[render_level] level={level} data.shape={getattr(data, 'shape', None)} dtype={getattr(data, 'dtype', None)}")
+
         raw  = self.raw_positions + self.translations + self.vol_global_start_point[level]
         f    = self.factor[level]
 
@@ -167,6 +174,14 @@ class SingleVolumeLOD:
         translate = local[::-1]
 
         # rendering
+
+        if data.ndim == 3:
+            tex_fmt = 'auto'
+        elif data.ndim == 4 and data.shape[-1] in (2, 3, 4):
+            tex_fmt = 'rgba'
+        else:
+            raise ValueError(f"[render_level] Unexpected data shape: {data.shape}")
+
         MyNode = scene.visuals.create_visual_node(MyVisual)
         vis = MyNode(data, parent=view.scene, threshold=threshold)
         vis.transform = STTransform(translate=tuple(translate))
@@ -197,11 +212,14 @@ class SingleVolumeLOD:
 
     def extract_next(self, center:np.ndarray, lvl:int):
         print("[SingleVolumeLOD] center: ", center)
-        out, new_starts = extract_volume_from_next_layer(
-            self, center, self.vol_global_start_point, self.folder, lvl
+        out, new_starts, new_ends = extract_volume_from_next_layer(
+            self, center, self.vol_global_start_point, self.vol_global_end_point, self.folder, lvl
         )
         self.volumes[lvl+1] = out
         self.vol_global_start_point = new_starts
+        self.vol_global_end_point = new_ends
+        print("[SingleVolumeLOD] global point: ", self.vol_global_start_point, self.vol_global_end_point)
+
         return out
 
     def dispose_visual(self, level: int, globalV: bool = False, pos: bool = False):
@@ -256,8 +274,22 @@ class SingleVolumeLOD:
 
         if level < len(self.volumes) and self.volumes[level] is not None:
             self.volumes[level] = None
+            self.vol_global_start_point[level] = [0, 0, 0]
+            self.vol_global_end_point[level] = [0, 0, 0]
 
         gc.collect()
+
+    def has_level(self, level: int) -> bool:
+        return (level < len(self.volumes) and self.volumes[level] is not None)
+
+
+    def has_visual(self, level: int) -> bool:
+        return level in getattr(self, 'visuals_by_level', {})
+
+    def activate_level(self, level: int, view):
+        vis = self.visuals_by_level[level]
+        if vis.parent is None:
+            view.add(vis)
 
 
 

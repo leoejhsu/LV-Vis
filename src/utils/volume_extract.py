@@ -3,32 +3,27 @@ from vispy.visuals.transforms import STTransform
 import os
 import numpy as np
 
+def _load_block_memmap(file_dir: str, vol_path: str):
+    if not vol_path or vol_path == "no_vol":
+        return None
+    last = vol_path.split("/")[-1]
+    fp = os.path.join(file_dir, f"{vol_path}/{last}.npy")
+    if not os.path.exists(fp):
+        return None
+    return np.load(fp, mmap_mode='r')
 
-def concatenate_arrays(array1, array2, axis):
-    array = np.concatenate((array1, array2), axis=axis) if np.any(array1) and np.any(array2) \
-        else array1 if np.any(array1) else array2 if np.any(array2) else [0]
-    return array
-
-def concatenate_8dim(idx_volume_sec):
-    intermediate_volumes = [[0]] * 4
-    for j in range(0, 8, 2):
-        intermediate_volumes[j // 2] = concatenate_arrays(idx_volume_sec[j], idx_volume_sec[j + 1], axis=2)
-
-    vol_0123 = concatenate_arrays(intermediate_volumes[0], intermediate_volumes[1], axis=1)
-    vol_4567 = concatenate_arrays(intermediate_volumes[2], intermediate_volumes[3], axis=1)
-    final_volume = concatenate_arrays(vol_0123, vol_4567, axis=0)
-
-    return final_volume
-
-def save_layer_volumes(self):
-    # Save current volumes before moving to the next layer
-    self.temp_volumes1[self.layer] = self.volume1
-    self.temp_volumes2[self.layer] = self.volume2
-    print("temp_volumes1",self.temp_volumes1[self.layer])
+def _infer_out_dtype(file_dir: str, vol_paths, fallback=None):
+    dt = None
+    for vp in vol_paths:
+        arr = _load_block_memmap(file_dir, vp)
+        if arr is None:
+            continue
+        dt = arr.dtype if dt is None else np.result_type(dt, arr.dtype)
+        del arr
+    return dt if dt is not None else fallback
 
 
-
-def extract_volume_from_next_layer(self, center, vol_global_start_point, file_dir, layer):
+def extract_volume_from_next_layer(self, center, vol_global_start_point, vol_global_end_point, file_dir, layer):
     layer_dict = self.layer_dict[layer]
     layer_dict_corners = self.layer_dict_corners[layer]
     factor = self.factor[layer]
@@ -39,9 +34,9 @@ def extract_volume_from_next_layer(self, center, vol_global_start_point, file_di
     print(center_correction)
     vol_size = np.array(self.vol_size)
     print("[vol_extract] vol size:" , vol_size)
-    boundary = [[0,0,0], vol_size * 8]
+    # boundary = [[0,0,0], vol_size * 8]
     cube = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-    print("[vol_extract] layer dict", layer_dict)
+    # print("[vol_extract] layer dict", layer_dict)
     for key, value in layer_dict.items():
         start = value
         end = value + np.array(vol_size * (factor / 2))
@@ -95,10 +90,21 @@ def extract_volume_from_next_layer(self, center, vol_global_start_point, file_di
 
             eight_dirc_form_center = np.array(
                 [[-1, -1, -1], [-1, -1, 1], [-1, 1, -1], [-1, 1, 1], [1, -1, -1], [1, -1, 1], [1, 1, -1], [1, 1, 1]])
-            eight_way = center_correction + load_vol_size * eight_dirc_form_center // 2
+            #
+            # eight_way = center_correction + load_vol_size * eight_dirc_form_center // 2
+
+            half = (np.asarray(load_vol_size, dtype=np.int64) // 2)
+            eight_way = np.asarray(center_correction, dtype=np.int64) + eight_dirc_form_center * half
             print("[vol_extract] eight_way\n", eight_way)
-            vol_start = np.maximum(eight_way[0], boundary[0])
-            vol_end = np.minimum(eight_way[-1],  boundary[1])
+            # vol_start = eight_way[0]
+            # vol_end = eight_way[-1]
+            starts = np.stack([layer_dict[v] for v in used_vol], axis=0).astype(np.int64)  # (k,3), ZYX
+            tile_sz = np.asarray(load_vol_size, dtype=np.int64)
+            block_min = starts.min(axis=0)
+            block_max = (starts + tile_sz).max(axis=0)
+            print("[vol_extract] block_min block_max\n", block_min, block_max)
+            vol_start = np.maximum(eight_way[0], block_min)
+            vol_end = np.minimum(eight_way[-1],  block_max)
             print("[vol_extract] volume start end position:",vol_start, vol_end)
 
             vol_relative_start = (vol_start - layer_dict[min_start_vol]).astype(np.int64)
@@ -106,40 +112,55 @@ def extract_volume_from_next_layer(self, center, vol_global_start_point, file_di
             print("[vol_extract] start from: ",min_start_vol)
             print("[vol_extract] volume relative start end position:", vol_relative_start, vol_relative_end)
             print("==============")
-            volumes = []
+
             print("[vol_extract] file dir", file_dir)
-            for volume_path in expand_used_vol:
-                if volume_path != "no_vol":
-                    volume_path_last = volume_path.split("/")[-1]
-                    file_path = os.path.join(file_dir, f"{volume_path}/{volume_path_last}.npy")
-                    if os.path.exists(file_path):
-                        print(file_path)
-                        # idx_volume_sec.append(np.load(file_path).astype(np.float32))
-                        # volumes.append((np.load(file_path) * 127).astype(np.int8))
-                        volumes.append(np.load(file_path))
+
+            denom = max(1, int(factor // 2))
+            real_start = (vol_relative_start // denom).astype(np.int64)
+
+            fallback_dt =  None
+            out_dtype = _infer_out_dtype(file_dir, expand_used_vol, fallback=fallback_dt)
+            if out_dtype is None:
+                out_dtype = np.float32
+
+            out = np.zeros(tuple(vol_size.tolist()), dtype=out_dtype)
+            out0 = real_start
+            out1 = real_start + vol_size
+
+            for j, vol_path in enumerate(expand_used_vol):
+                arr = _load_block_memmap(file_dir, vol_path)
+                if arr is None:
+                    continue
+                iz = (j >> 2) & 1
+                iy = (j >> 1) & 1
+                ix = (j >> 0) & 1
+                az, ay, ax = arr.shape
+                b0 = np.array([iz * az, iy * ay, ix * ax], dtype=np.int64)
+                b1 = b0 + np.array([az, ay, ax], dtype=np.int64)
+                s0 = np.maximum(out0, b0)
+                s1 = np.minimum(out1, b1)
+                if np.any(s1 <= s0):
+                    del arr
+                    continue
+
+                src0 = (s0 - b0).astype(int)
+                dst0 = (s0 - out0).astype(int)
+                sz = (s1 - s0).astype(int)
+                src = (slice(src0[0], src0[0] + sz[0]),
+                       slice(src0[1], src0[1] + sz[1]),
+                       slice(src0[2], src0[2] + sz[2]))
+                dst = (slice(dst0[0], dst0[0] + sz[0]),
+                       slice(dst0[1], dst0[1] + sz[1]),
+                       slice(dst0[2], dst0[2] + sz[2]))
+
+                if arr.dtype == out_dtype:
+                    out[dst] = arr[src]
                 else:
-                    volumes.append([0])
+                    out[dst] = np.asarray(arr[src], dtype=out_dtype)
+                del arr
 
-
-            cat_volume = concatenate_8dim(volumes)
-            print('[vol_extract] load vols', cat_volume.shape)
-
-
-            real_vol_relative_start = vol_relative_start // (factor // 2)
-            # real_vol_relative_end = vol_relative_end // (factor // 2)
-            # array = [[real_vol_relative_start[0], real_vol_relative_end[0]],
-            #     [real_vol_relative_start[1], real_vol_relative_end[1]],
-            #     [real_vol_relative_start[2], real_vol_relative_end[2]]
-            # ]
-            # print(array)
-
-            outputVol = cat_volume[
-                        real_vol_relative_start[0]: real_vol_relative_start[0]+vol_size[0],
-                        real_vol_relative_start[1]: real_vol_relative_start[1]+vol_size[1],
-                        real_vol_relative_start[2]: real_vol_relative_start[2]+vol_size[2]
-                             ]
-            outputVol = ((outputVol - outputVol.min()) / (
-                    outputVol.max() - outputVol.min())).astype(np.float32)
-            vol_global_start_point[layer+1] = vol_start
-            return outputVol, vol_global_start_point
+            print('[vol_extract] filled ROI directly, shape', out.shape, 'dtype', out.dtype)
+            vol_global_start_point[layer + 1] = vol_start
+            vol_global_end_point[layer + 1] = vol_end
+            return out, vol_global_start_point, vol_global_end_point
 

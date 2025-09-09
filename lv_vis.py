@@ -228,7 +228,12 @@ class LVVisWindow(QMainWindow):
             print(f"selector box start: {self.selector.box_start}")
             self._drill_overlaps(threshold=0.3)
             self.selector.remove_box()
-            self.selector.draw_box_in_global(self.global_view, loaders[0].factor, lvl)
+            globox_in_ldr = []
+            for ldr in loaders:
+                globox_in_ldr.append([ldr.vol_global_start_point[self.controller.current_layer]+ldr.raw_positions,
+                                      ldr.vol_global_end_point[self.controller.current_layer]+ldr.raw_positions])
+
+            self.selector.draw_box_in_global(self.global_view, loaders[0].factor, globox_in_ldr, lvl)
             self.global_canvas_manager.canvas.update()
             return
         # Cancel ROI selection on 'N'
@@ -348,6 +353,8 @@ class LVVisWindow(QMainWindow):
             shapes=shapes,
             transforms=translates
         )
+        # vec = shapes[0]/2
+        # print("shape/2 ",vec)
         print(f"idx: {idx}, vec: {vec}")
         if idx is not None:
             t = np.array(
@@ -374,6 +381,9 @@ class LVVisWindow(QMainWindow):
     def _drill_overlaps(self, threshold: float = 0.25):
         t0 = time.perf_counter()
         m0 = _mem_snapshot()
+        any_overlap = False
+        union_gs = None
+        union_ge = None
         try:
             lvl = self.controller.current_layer
             loaders = list(self.controller.volumes.values())
@@ -422,6 +432,14 @@ class LVVisWindow(QMainWindow):
                 if np.all(ov_s_global < ov_e_global):
                     any_overlap = True
                     print("[_drill_overlaps]    → Overlap detected. Proceeding to next-level extraction")
+
+                    # if union_gs is None:
+                    #     union_gs = ov_s_global.copy()
+                    #     union_ge = ov_e_global.copy()
+                    # else:
+                    #     union_gs = np.minimum(union_gs, ov_s_global)
+                    #     union_ge = np.maximum(union_ge, ov_e_global)
+
                     # --- Step 5: Compute extraction center (center_local) ---
                     mid_global = ov_s_global + ((ov_e_global - ov_s_global) // 2)
                     print(f"[_drill_overlaps] 5) mid_global (intersection center, global) = {mid_global}")
@@ -446,6 +464,8 @@ class LVVisWindow(QMainWindow):
 
             # --- Final Step: If any overlap found, update layer and redraw ---
             if any_overlap:
+                # self.selector.set_actual_roi_global(lvl, union_gs, union_ge)
+
                 print(f"\n[_drill_overlaps] Updating controller.current_layer: {lvl} → {lvl + 1}\n")
                 self.controller.current_layer += 1
                 self._recenter_camera_on_volumes()
@@ -459,24 +479,53 @@ class LVVisWindow(QMainWindow):
             m1 = _mem_snapshot()
             _print_perf_report("drill_overlaps", t0, m0, t1, m1)
 
+    # def _reload_layer(self):
+    #     t0 = time.perf_counter()
+    #     m0 = _mem_snapshot()
+    #     try:
+    #         self.controller.current_layer -= 1
+    #         lvl = self.controller.current_layer
+    #         self.selector._removeGlobalBox(lvl)
+    #         self.selector._reload_global(self.global_view, lvl-1)
+    #
+    #         loaders = list(self.controller.volumes.values())
+    #         for i, ldr in enumerate(loaders):
+    #             print('[_reload_layer] volume ',i, f'in level {lvl+1} trasforms', ldr.volume_visuals.transform)
+    #             ldr.volumes[lvl+1] = None
+    #             ldr.free_level(lvl + 1)
+    #             ldr.render_level(lvl, self.view)
+    #             self._recenter_camera_on_volumes()
+    #             self.ctrl_panel.refresh_current()
+    #             print('[_reload_layer] volume ',i, f'in level {lvl} trasforms', ldr.volume_visuals.transform)
+    #
+    #     finally:
+    #         t1 = time.perf_counter()
+    #         m1 = _mem_snapshot()
+    #         _print_perf_report("reload_layer", t0, m0, t1, m1)
     def _reload_layer(self):
         t0 = time.perf_counter()
         m0 = _mem_snapshot()
         try:
             self.controller.current_layer -= 1
             lvl = self.controller.current_layer
+
             self.selector._removeGlobalBox(lvl)
-            self.selector._reload_global(self.global_view, lvl-1)
+            self.selector._reload_global(self.global_view, lvl - 1)
 
             loaders = list(self.controller.volumes.values())
+
             for i, ldr in enumerate(loaders):
-                print('[_reload_layer] volume ',i, f'in level {lvl+1} trasforms', ldr.volume_visuals.transform)
-                # ldr.volumes[lvl+1] = None
-                ldr.free_level(lvl + 1)
-                ldr.render_level(lvl, self.view)
-                self._recenter_camera_on_volumes()
-                self.ctrl_panel.refresh_current()
-                print('[_reload_layer] volume ',i, f'in level {lvl} trasforms', ldr.volume_visuals.transform)
+                if ldr.has_level(lvl + 1):  # 建議加一個 helper
+                    print(f'[_reload_layer] free level {lvl + 1} for volume {i}')
+                    ldr.free_level(lvl + 1)
+
+            for i, ldr in enumerate(loaders):
+                if ldr.has_level(lvl):
+                    print(f'[_reload_layer] render level {lvl} for volume {i}')
+                    ldr.render_level(lvl, self.view)
+
+            self._recenter_camera_on_volumes()
+            self.ctrl_panel.refresh_current()
 
         finally:
             t1 = time.perf_counter()

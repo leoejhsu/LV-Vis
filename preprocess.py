@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
 """
 LOD Preprocessing Pipeline (CLI)
 Transforms a 3D volume (TIFF series folder or a single 3D TIFF stack) into an

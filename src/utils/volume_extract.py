@@ -1,4 +1,6 @@
-from vispy.visuals.transforms import STTransform
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
 
 import os
 import numpy as np

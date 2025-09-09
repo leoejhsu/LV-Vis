@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
 """
 A simple PyQt5 GUI wrapper for your preprocessing pipeline
 (data_preprocessing_adpated.py). Designed for non‑programmers.

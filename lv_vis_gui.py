@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
 """
 LV-Vis Launcher (PyQt5)
 A simple GUI to launch the LV-Vis multi-volume LOD viewer (LVVisWindow).

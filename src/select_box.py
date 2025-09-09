@@ -1,10 +1,12 @@
-from PIL.Image import blend
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
 from vispy.scene.visuals import Box
 from vispy.visuals.transforms import STTransform
 from vispy import gloo
 import numpy as np
-import datetime
-import imageio  # pip install imageio
+
 
 class VolumeSelector:
     def __init__(self, canvas, view, shape, w, h):

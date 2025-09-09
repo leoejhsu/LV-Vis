@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
+
 # Volume Data Structure (aligned with vol_setting.py)
 #
 # ├─ MultiVolumeController                          # Controller of multiple SingleVolumeLOD

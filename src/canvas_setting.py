@@ -1,12 +1,11 @@
-import pandas as pd
-import ast
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
+
 from vispy.visuals.transforms import STTransform
 from vispy import scene, app
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout
-import numpy as np
-import os
 
-from .my_vispy.my_volume import MyVisual
 
 
 

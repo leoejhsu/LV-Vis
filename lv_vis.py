@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# LV-Vis — Large Volume LOD Visualization System
+# Copyright (c) Hsu I Chieh
+
 """
 LV-Vis Viewer (PyQt5 + VisPy)
 A lightweight launcher/window for multi-volume LOD visualization.
@@ -433,13 +437,6 @@ class LVVisWindow(QMainWindow):
                     any_overlap = True
                     print("[_drill_overlaps]    → Overlap detected. Proceeding to next-level extraction")
 
-                    # if union_gs is None:
-                    #     union_gs = ov_s_global.copy()
-                    #     union_ge = ov_e_global.copy()
-                    # else:
-                    #     union_gs = np.minimum(union_gs, ov_s_global)
-                    #     union_ge = np.maximum(union_ge, ov_e_global)
-
                     # --- Step 5: Compute extraction center (center_local) ---
                     mid_global = ov_s_global + ((ov_e_global - ov_s_global) // 2)
                     print(f"[_drill_overlaps] 5) mid_global (intersection center, global) = {mid_global}")
@@ -479,29 +476,6 @@ class LVVisWindow(QMainWindow):
             m1 = _mem_snapshot()
             _print_perf_report("drill_overlaps", t0, m0, t1, m1)
 
-    # def _reload_layer(self):
-    #     t0 = time.perf_counter()
-    #     m0 = _mem_snapshot()
-    #     try:
-    #         self.controller.current_layer -= 1
-    #         lvl = self.controller.current_layer
-    #         self.selector._removeGlobalBox(lvl)
-    #         self.selector._reload_global(self.global_view, lvl-1)
-    #
-    #         loaders = list(self.controller.volumes.values())
-    #         for i, ldr in enumerate(loaders):
-    #             print('[_reload_layer] volume ',i, f'in level {lvl+1} trasforms', ldr.volume_visuals.transform)
-    #             ldr.volumes[lvl+1] = None
-    #             ldr.free_level(lvl + 1)
-    #             ldr.render_level(lvl, self.view)
-    #             self._recenter_camera_on_volumes()
-    #             self.ctrl_panel.refresh_current()
-    #             print('[_reload_layer] volume ',i, f'in level {lvl} trasforms', ldr.volume_visuals.transform)
-    #
-    #     finally:
-    #         t1 = time.perf_counter()
-    #         m1 = _mem_snapshot()
-    #         _print_perf_report("reload_layer", t0, m0, t1, m1)
     def _reload_layer(self):
         t0 = time.perf_counter()
         m0 = _mem_snapshot()

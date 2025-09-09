@@ -82,4 +82,7 @@ See [docs/lv_vis.md](docs/lv_vis.md) for full details.
 ---
 
 ## License
+GPL-3.0-only. See [LICENSE](./LICENSE).  
+Third-party attributions: see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+
 ...

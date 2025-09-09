@@ -583,7 +583,7 @@ if __name__ == '__main__':
     elif args.legacy_csv:
         csv_path = args.legacy_csv
     else:
-        csv_path = './datapath_csv/rod_multi_1vol.csv'
+        raise ValueError("No input source specified. Please provide --csv, --folder, or --legacy-csv.")
 
     app_qt = QApplication(sys.argv)
     window = LVVisWindow(csv_path, w=args.width, h=args.height)

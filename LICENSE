@@ -1,0 +1,34 @@
+LV-Vis: Large Volume LOD Visualization System
+Copyright (c) 2025 Hsu I Chieh
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License v3 (GPLv3)
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+-------------------------------------------------------------------------------
+Third-party components and their licenses:
+
+- VisPy (https://github.com/vispy/vispy)
+  Copyright (c) VisPy Development Team
+  Licensed under the BSD 3-Clause License
+
+- PyQt5 (https://riverbankcomputing.com/software/pyqt/intro)
+  Licensed under the GPL v3 (or commercial license from Riverbank Computing)
+
+- NumPy (https://numpy.org) / SciPy / Matplotlib / Pandas / scikit-image /
+  tifffile / tqdm / imageio / psutil / pynvml
+  Licensed under BSD, MIT, or other permissive open source licenses.
+
+-------------------------------------------------------------------------------
+Note:
+If you intend to redistribute or use this project for commercial purposes,
+you must ensure compliance with the PyQt5 licensing terms. For non-commercial
+or academic use, GPLv3 is sufficient.

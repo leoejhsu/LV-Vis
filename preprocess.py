@@ -390,12 +390,27 @@ def oneVolProcessing(file_path, dtype=None, stack_path=None,
 
 def main(file_path: str, dtype):
     if file_path.endswith(".csv"):
-        # read CSV
         df = pd.read_csv(file_path, header=None)
-        for i in df[0]:
-            file_path_i = i
-            print(f"[CSV Mode] Processing folder: {file_path_i}")
-            oneVolProcessing(file_path_i, dtype)
+        for idx, i in enumerate(df[0]):
+            folder = str(i).strip()
+            if not folder:
+                raise FileNotFoundError(f"Row {idx + 1}: empty path in CSV")
+
+            if not os.path.isabs(folder):
+                folder = os.path.join(os.getcwd(), folder)
+
+            if not os.path.isdir(folder) and not folder.lower().endswith((".tif", ".tiff")):
+                raise FileNotFoundError(
+                    f"Row {idx + 1}: resolved path does not exist or is invalid: {folder!r}"
+                )
+
+            print(f"[CSV Mode] Processing folder: {folder}")
+            if folder.lower().endswith((".tif", ".tiff")):
+                parent_dir = os.path.dirname(folder)
+                oneVolProcessing(parent_dir, dtype, stack_path=folder)
+            else:
+                oneVolProcessing(folder, dtype)
+
     elif os.path.isdir(file_path):
         # read 1 folder of tiff
         print(f"[Folder Mode] Processing folder: {file_path}")

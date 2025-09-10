@@ -270,48 +270,48 @@ class MainWindow(QMainWindow):
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(2, 0)
 
-        # row 0: path
+        # row 0: Input mode (Radio Buttons)
+        self.mode_csv = QRadioButton("CSV")
+        self.mode_dir = QRadioButton("Folder (TIFF Series)")
+        self.mode_tiff = QRadioButton("Single 3D TIFF")
+        self.mode_csv.setChecked(True)
+        grp = QButtonGroup(self)  # For exclusivity
+        grp.addButton(self.mode_csv)
+        grp.addButton(self.mode_dir)
+        grp.addButton(self.mode_tiff)
+        grid.addWidget(QLabel("Mode:"), 0, 0)
+        grid.addWidget(self.mode_csv, 0, 1)
+        grid.addWidget(self.mode_dir, 0, 2)
+        grid.addWidget(self.mode_tiff, 0, 3)
+
+        # row 1: path
         self.edit_path = QLineEdit()
         self.edit_path.setPlaceholderText("Select .csv / Folder / Single 3D TIFF")
         self.edit_path.setMinimumWidth(300)
         btn_browse = QPushButton("Browse…")
         btn_browse.clicked.connect(self.browse_input)
-        grid.addWidget(QLabel("Path (.csv / Folder / Single 3D TIFF):"), 0, 0)
-        grid.addWidget(self.edit_path, 0, 1)
-        grid.addWidget(btn_browse, 0, 2)
+        grid.addWidget(QLabel("Path:"), 1, 0)
+        grid.addWidget(self.edit_path, 1, 1)
+        grid.addWidget(btn_browse, 1, 2)
 
-        # row 1: dtype
+        # row 2: dtype
         self.dtype_combo = QComboBox()
         self.dtype_combo.addItems(["Auto (from data)", "uint16", "float32"])
-        grid.addWidget(QLabel("Data Type (dtype):"), 1, 0)
-        grid.addWidget(self.dtype_combo, 1, 1)
+        grid.addWidget(QLabel("Data Type (dtype):"), 2, 0)
+        grid.addWidget(self.dtype_combo, 2, 1)
 
-        # row 2: LOD output folder name
+        # row 3: LOD output folder name
         self.lod_name_edit = QLineEdit()
         self.lod_name_edit.setText("LOD_Data")
-        grid.addWidget(QLabel("Output Folder Name (LOD):"), 2, 0)
-        grid.addWidget(self.lod_name_edit, 2, 1)
+        grid.addWidget(QLabel("Output Folder Name (LOD):"), 3, 0)
+        grid.addWidget(self.lod_name_edit, 3, 1)
 
-        # row 3: min_size
+        # row 4: min_size
         self.min_size = QSpinBox()
         self.min_size.setRange(16, 4096)
         self.min_size.setValue(100)
-        grid.addWidget(QLabel("min_size (for LOD estimation):"), 3, 0)
-        grid.addWidget(self.min_size, 3, 1)
-
-        # row 4: Input mode (Radio Buttons)
-        self.mode_csv = QRadioButton("CSV")
-        self.mode_dir = QRadioButton("Folder (TIFF Series)")
-        self.mode_tiff = QRadioButton("Single 3D TIFF")
-        self.mode_csv.setChecked(True)
-        grp = QButtonGroup(self)  # For exclusivity only, not added to layout
-        grp.addButton(self.mode_csv)
-        grp.addButton(self.mode_dir)
-        grp.addButton(self.mode_tiff)
-        grid.addWidget(self.mode_csv, 4, 0)
-        grid.addWidget(self.mode_dir, 4, 1)
-        grid.addWidget(self.mode_tiff, 4, 2)
-
+        grid.addWidget(QLabel("min_size (for LOD estimation):"), 4, 0)
+        grid.addWidget(self.min_size, 4, 1)
 
         root.addWidget(g_input)
 

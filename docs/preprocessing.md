@@ -138,3 +138,6 @@ The PyQt5 GUI workflow:
 - For visualization, prepare a **separate 4-column CSV** (`path,x,y,z`) to specify placement of volumes in world space.
 
 ---
+
+## 7) Demo video
+-  https://youtu.be/9aDNPccV26A

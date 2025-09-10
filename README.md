@@ -80,7 +80,12 @@ See [docs/lv_vis.md](docs/lv_vis.md) for full details.
 - [Visualization Guide](docs/lv_vis.md)
 
 ---
+## Demo video
+- Preprocessing: https://youtu.be/9aDNPccV26A
+- Single Volume Visualization: https://youtu.be/lcOh9wv-mEM
+- Multi-Volume Visualization: https://youtu.be/wzgscTEf6mM
 
+---
 ## License
 GPL-3.0-only. See [LICENSE](./LICENSE).  
 Third-party attributions: see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

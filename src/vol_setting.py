@@ -338,8 +338,16 @@ class MultiVolumeController:
         new_ids = []
         for idx, row in df.iterrows():
             folder = str(row[0]).strip()
-            if not folder or not os.path.isdir(folder):
-                raise FileNotFoundError(f"Row {idx + 1}: path does not exist or is invalid: {folder!r}")
+            if not folder:
+                raise FileNotFoundError(f"Row {idx + 1}: empty path in CSV")
+
+            if not os.path.isabs(folder):
+                folder = os.path.join(os.getcwd(), folder)
+
+            if not os.path.isdir(folder):
+                raise FileNotFoundError(
+                    f"Row {idx + 1}: resolved path does not exist or is invalid: {folder!r}"
+                )
 
             try:
                 x = float(row[1])

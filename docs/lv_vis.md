@@ -85,21 +85,47 @@ When the viewer opens (from `lv_vis.py`):
 ### A. Selection & Zoom-in (ROI)
 
 * **Hold `Ctrl` + Left‑Click** on the **Interactive** canvas to pick a volume at the cursor.
+
+<p align="center">
+      <img src="../img/roiclick.gif" alt="roiclick" />
+</p>
+
 * A translucent ROI box is drawn around the picked region.
 * **W/A/S/D/Q/E** (while `Ctrl` is held) → Move the ROI box by ±1 voxel along X/Y/Z (X: A/D, Y: W/S, Z: Q/E).
+<p align="center">
+      <img src="../img/roimove.gif" alt="roiclick" />
+</p>
+
 * **`Y`** → Zoom-in (load the next LOD level) at the current ROI for all overlapping volumes.
+<p align="center">
+      <img src="../img/roizoomin.gif" alt="roiclick" />
+</p>
 
   * The **Global** canvas will display a yellow‑edged ROI box for context.
 * **`N`** → Cancel / remove the ROI box.
 
-### B. Layer Navigation
+### B. Zoom-out
 
 * **`Alt`** (when current layer > 0) → Step **back up** one LOD level.
+
+<p align="center">
+      <img src="../img/zoomout.gif" alt="roiclick" />
+</p>
 
 ### C. Volume Translation (manual fine alignment)
 
 * **`O` / `P`** → Select previous/next volume (the selected one briefly dims to indicate selection).
+
+<p align="center">
+      <img src="../img/volselect.gif" alt="roiclick" />
+</p>
+
 * **`W/A/S/D/Q/E`** (without holding `Ctrl`) → Move the **selected volume** by `move_step` (default 2.0) along X/Y/Z.
+
+<p align="center">
+      <img src="../img/volmove.gif" alt="roiclick" />
+</p>
+
 * The translation is applied in world/LOD space with correct scale factors; both canvases update accordingly.
 
 ### D. Camera & Animation
@@ -113,26 +139,41 @@ When the viewer opens (from `lv_vis.py`):
 
 ## 6) Control Panel (bottom bar)
 
-### A. GPU/RAM Usage Monitors
+### A. GPU & RAM Monitors
 
-* **Left chart (cyan)**: **GPU process memory** (MB) via NVML.
-* **Right chart (white)**: **Python process memory (RAM)** (MB).
-* Both charts update every second with history up to 60s.
-* Labels above charts show the latest usage (MB).
+* **GPU (cyan):** NVIDIA GPU process memory in MB (via NVML, if available).
+* **RAM (white):** Python process memory usage in MB (via `psutil`).
+* Updated once per second with \~60 s history.
+* Labels above the charts show the latest usage values.
 
 ### B. Camera Control
 
-* **Canvas selector**: Choose target camera (*Interactive* or *Global*).
-* **Axis selector**: Pick rotation axis (`azimuth`, `elevation`, or `roll`).
-* **Input field**: Enter numeric angle (float).
-* **Apply button**: Apply rotation to selected camera.
-* **Center Camera**: Reset and recenter the camera on loaded volumes.
+* **Canvas selector:** Choose which camera to control (*Interactive* or *Global*).
+* **Axis selector:** Rotation axis (`azimuth`, `elevation`, or `roll`).
+* **Angle input + Apply:** Enter a numeric angle (float) and apply to the selected camera.
+* **Center Camera:** Reset and recenter on all loaded volumes.
+* **Screenshot:** Capture the Interactive canvas to a `.tiff` file.
 
-### C. Screenshot Tool
+  * Temporarily hides the axis overlay, crops black borders, then restores it.
 
-* **Screenshot Interactive Canvas**: Captures the current Interactive canvas.
-* Auto‑hides axis overlay during capture, crops black borders, then restores axis.
-* Saves output as `.tiff` (user prompted for save location).
+### C. Volume Panel
+
+* **Select Volume:** Drop-down menu of loaded volumes (by ID).
+* **Translation readout:** Shows current translation for the selected volume in both
+  *Interactive* and *Global* canvases.
+* **Rendering parameters:** Adjust
+
+  * `gamma` (0.05–5.0),
+  * `u_min` (0.0–1.0),
+  * `u_max` (0.0–1.0).
+* **Reset button:** Restore render parameters to defaults (`gamma=1.0, u_min=0.0, u_max=1.0`).
+
+### D. Memory Logging
+
+* **Status indicator:** Shows **idle** (gray) or **REC** (red).
+* **Start Logging / Stop & Save:** Toggle recording of RAM/VRAM usage over time.
+* On stop, prompts to save results as a CSV (`time_iso, elapsed_s, ram_mb, vram_mb`).
+
 
 ---
 
@@ -193,5 +234,5 @@ python lv_vis_gui.py
 
 ## 12) Demo video
 
-* **Single Volume** - [https://youtu.be/lcOh9wv-mEM](https://youtu.be/lcOh9wv-mEM)
-* **Multiple Volume** - [https://youtu.be/wzgscTEf6mM](https://youtu.be/wzgscTEf6mM)
+* **Single Volume** (Demo with CT-reconstructed mouse hippocampus volume)- [https://youtu.be/hVT-jfipEO0](https://youtu.be/hVT-jfipEO0)
+* **Multiple Volume** (Demo with CT-reconstructed mouse hippocampus volume)- [https://youtu.be/c9whmH5vtbs](https://youtu.be/c9whmH5vtbs)

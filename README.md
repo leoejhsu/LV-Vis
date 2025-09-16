@@ -1,5 +1,9 @@
 # LV-Vis: Large-Volume LOD Visualization System
 
+<p align="center">
+  <img src="img/demotogif.gif" alt="demo" />
+</p>
+
 An open-source framework for **multi-resolution 3D volume visualization** built with **VisPy + PyQt5**. It enables efficient exploration of large volumetric datasets by combining preprocessing into octree-based Level-of-Detail (LOD) structures and interactive rendering with GPU acceleration.
 
 ---
@@ -82,8 +86,8 @@ See [docs/lv_vis.md](docs/lv_vis.md) for full details.
 ---
 ## Demo video
 - Preprocessing: https://youtu.be/9aDNPccV26A
-- Single Volume Visualization: https://youtu.be/lcOh9wv-mEM
-- Multi-Volume Visualization: https://youtu.be/wzgscTEf6mM
+- Single Volume Visualization (Demo with CT-reconstructed mouse hippocampus volume): https://youtu.be/hVT-jfipEO0
+- Multi-Volume Visualization (Demo with CT-reconstructed mouse hippocampus volume): https://youtu.be/c9whmH5vtbs
 
 ---
 ## License

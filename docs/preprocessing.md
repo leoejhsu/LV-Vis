@@ -38,7 +38,7 @@ Three input modes are supported:
 3. **Single 3D TIFF Mode**  
    A single multi-page TIFF stack file:
    ```
-   kidney_volume.tiff
+   Data_stack.tiff
    ```
 
 ---
@@ -90,7 +90,7 @@ python preprocess.py --input INPUT_PATH --dtype DTYPE --lod_name LOD_Data --min_
    ```
 3. Single 3D TIFF stack:
    ```bash
-   python preprocess.py --input ./kidney_stack.tiff --dtype float32 --lod_name MyLOD
+   python preprocess.py --input ./Data_stack.tiff --dtype float32 --lod_name MyLOD
    ```
 
 ---

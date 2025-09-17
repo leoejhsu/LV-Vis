@@ -45,5 +45,6 @@ class CanvasManager:
     def __init__(self, parent_widget, w, h):
         self.canvas = scene.SceneCanvas(keys='interactive', size=(w, h), show=True)
         self.view = self.canvas.central_widget.add_view()
+        # self.canvas.measure_fps()
         # layout = QHBoxLayout(parent_widget)
         # layout.addWidget(self.canvas.native)

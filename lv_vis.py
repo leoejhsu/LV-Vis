@@ -47,6 +47,7 @@ Notes
 
 import sys
 import os
+
 import numpy as np
 from vispy import scene, app
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel
@@ -58,10 +59,12 @@ from src.control_panel import ControlPanel
 import argparse, tempfile, csv
 import time
 import psutil
+from collections import deque
 
 class LVVisWindow(QMainWindow):
     def __init__(self, csv_path: str, w: int = 1200, h: int = 1200):
         super().__init__()
+        self._t0_startup = time.perf_counter()
         self.setWindowTitle("LV-Vis Viewer")
 
         self.w, self.h = int(w), int(h)
@@ -168,12 +171,20 @@ class LVVisWindow(QMainWindow):
         # bind canvas events
         canvas = self.canvas_manager.canvas
         canvas.events.mouse_press.connect(self.on_mouse_press)
-        canvas.events.draw      .connect(self.on_draw)
+        canvas.events.draw.connect(self.on_draw)
         canvas.events.key_press .connect(self.on_key_press)
         canvas.events.key_release.connect(self.on_key_release)
+        canvas.events.draw.connect(self._on_draw_fps)
+
+        self._fps_last_t = None
+        self._fps_window = deque(maxlen=120)
+        self._rotate_fps_samples = []
+        self._fps_logging = False
 
         self.show()
 
+        _ms = (time.perf_counter() - self._t0_startup) * 1000
+        print(f"[Startup] __init__ completed in {_ms:.1f} ms")
 
     def rotate_camera(self, event):
         if self.is_rotating:
@@ -234,8 +245,8 @@ class LVVisWindow(QMainWindow):
             self.selector.remove_box()
             globox_in_ldr = []
             for ldr in loaders:
-                globox_in_ldr.append([ldr.vol_global_start_point[self.controller.current_layer]+ldr.raw_positions,
-                                      ldr.vol_global_end_point[self.controller.current_layer]+ldr.raw_positions])
+                globox_in_ldr.append([ldr.vol_global_start_point[self.controller.current_layer]+ldr.raw_positions+ldr.translations,
+                                      ldr.vol_global_end_point[self.controller.current_layer]+ldr.raw_positions+ldr.translations])
 
             self.selector.draw_box_in_global(self.global_view, loaders[0].factor, globox_in_ldr, lvl)
             self.global_canvas_manager.canvas.update()
@@ -250,6 +261,11 @@ class LVVisWindow(QMainWindow):
         if event.key == 'R':
             self.is_rotating = not self.is_rotating
             (self.rotation_timer.start() if self.is_rotating else self.rotation_timer.stop())
+
+            if self.is_rotating:
+                self._start_fps_logging()
+            else:
+                self._stop_fps_logging()
             return
 
         # Switch selected volume index for volume moving
@@ -367,6 +383,21 @@ class LVVisWindow(QMainWindow):
 
         self.canvas_manager.canvas.update()
 
+    def _on_draw_fps(self, event):
+        now = time.perf_counter()
+        if self._fps_last_t is None:
+            self._fps_last_t = now
+            return
+        dt = now - self._fps_last_t
+        self._fps_last_t = now
+        if dt <= 0:
+            return
+        inst_fps = 1.0 / dt
+        self._fps_window.append(inst_fps)
+
+        if self._fps_logging and self.is_rotating:
+            self._rotate_fps_samples.append(inst_fps)
+
     def _highlight_selected(self):
         lvl = self.controller.current_layer
         loaders = list(self.controller.volumes.values())
@@ -385,7 +416,6 @@ class LVVisWindow(QMainWindow):
     def _drill_overlaps(self, threshold: float = 0.25):
         t0 = time.perf_counter()
         m0 = _mem_snapshot()
-        any_overlap = False
         union_gs = None
         union_ge = None
         try:
@@ -423,7 +453,7 @@ class LVVisWindow(QMainWindow):
 
                 vol_s_global = raw_global.copy()
                 vol_e_global = np.minimum(raw_global + ldr.vol_size * factor,
-                                          volMaximum + ldr.raw_positions)
+                                          volMaximum + ldr.raw_positions+ldr.translations)
                 print(f"[_drill_overlaps]    vol_s_global (global start) = {vol_s_global}")
                 print(f"[_drill_overlaps]    vol_e_global (global end)   = {vol_e_global}")
 
@@ -506,6 +536,23 @@ class LVVisWindow(QMainWindow):
             m1 = _mem_snapshot()
             _print_perf_report("reload_layer", t0, m0, t1, m1)
 
+    def _start_fps_logging(self):
+        self._fps_last_t = None
+        self._fps_window.clear()
+        self._rotate_fps_samples.clear()
+        self._fps_logging = True
+        print("[FPS] start rotate-FPS logging")
+
+    def _stop_fps_logging(self):
+        self._fps_logging = False
+        if not self._rotate_fps_samples:
+            print("[FPS] no samples")
+            return
+        arr = np.array(self._rotate_fps_samples, dtype=float)
+        mean, std = float(arr.mean()), float(arr.std(ddof=1)) if arr.size > 1 else 0.0
+        p5, p95 = float(np.percentile(arr, 5)), float(np.percentile(arr, 95))
+        print(f"[FPS] rotate summary → mean={mean:.1f}, std={std:.1f}, p5={p5:.1f}, p95={p95:.1f}, n={arr.size}")
+
 def _mem_snapshot():
     process = psutil.Process(os.getpid())
     mi = process.memory_info()
@@ -550,6 +597,7 @@ def _make_temp_csv_single(folder: str, coords=(0, 0, 0)) -> str:
         x, y, z = coords
         w.writerow([folder, x, y, z])
     return path
+
 
 
 def _parse_args():

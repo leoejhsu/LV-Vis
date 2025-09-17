@@ -69,7 +69,7 @@ def extract_volume_from_next_layer(self, center, vol_global_start_point, vol_glo
             print("[vol_extract] used_value:", used_value)
             min_start_vol = min(used_vol, key=lambda vol: tuple(layer_dict[vol]))
 
-            # print(min_start_vol)
+            print("[vol_extract] min_start_vol:",min_start_vol)
 
             load_vol_size = vol_size * (factor/ 2)
             print("[vol_extract] next vol size",load_vol_size)

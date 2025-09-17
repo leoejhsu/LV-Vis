@@ -219,11 +219,6 @@ class VolumeSelector:
         """
         max_f = f[0]
 
-        # 0) 移除舊的 global boxes
-        # for i, _global_box in enumerate(self._global_box):
-        #     if _global_box:
-        #         _global_box.parent = None
-        #         self._global_box[i] = None
         for _global_box in self._global_box:
             if _global_box:
                 _global_box.parent = None

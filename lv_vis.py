@@ -304,7 +304,7 @@ class LVVisWindow(QMainWindow):
             raw = loader.raw_positions + loader.translations + loader.vol_global_start_point[lvl]
 
             local = (raw // factor)[::-1]
-            print(f"volume index: {self.selected_index} raw positions: {raw}, local: {local}")
+            print(f"volume index: {self.selected_index} positions: {raw}, local: {local}")
 
             vis = loader.volume_visuals
             tr = vis.transform

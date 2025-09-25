@@ -207,6 +207,11 @@ class ControlPanel(QWidget):
         vol_group.setLayout(vol_lay)
         main_lay.addWidget(vol_group)
 
+        # 5) Export CSV: ID, RAW_POS, RAW_POS+TRANSLATION (global, in original-res voxels)
+        self.btn_export_csv = QPushButton("Export Volume Positions CSV")
+        self.btn_export_csv.clicked.connect(self._export_volumes_csv)
+        vol_lay.addWidget(self.btn_export_csv)
+
         # ====== Logging group ======
         log_group = QGroupBox("Memory Logging")
         log_lay = QVBoxLayout()
@@ -222,6 +227,81 @@ class ControlPanel(QWidget):
         log_lay.addWidget(self.log_toggle_btn)
         log_group.setLayout(log_lay)
         main_lay.addWidget(log_group)
+
+    def _export_volumes_csv(self):
+        """
+        Export a CSV with columns:
+        id, raw_pos_x, raw_pos_y, raw_pos_z, final_pos_x, final_pos_y, final_pos_z
+
+        RAW_POS  來自 loader.raw_positions（內部 Z,Y,X → 轉成 X,Y,Z）
+        TRANSLATION 使用 Global 視窗的 transform.translate，再乘以 factor[0]
+        FINAL_POS = RAW_POS + TRANSLATION
+        """
+        if not hasattr(self, "_volumes") or not self._volumes:
+            print("No volumes to export.")
+            return
+
+        # 選擇輸出檔
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"vol_positions_{ts}.csv"
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Volume Positions", default_name, "CSV Files (*.csv)"
+        )
+        if not save_path:
+            print("Save canceled.")
+            return
+        if not os.path.splitext(save_path)[1]:
+            save_path += ".csv"
+
+        rows = []
+        # 逐一蒐集
+        for vid, ldr in sorted(self._volumes.items(), key=lambda kv: kv[0]):
+            # RAW_POS: 內部為 (Z,Y,X)，輸出改為 (X,Y,Z)
+            if hasattr(ldr, "raw_positions") and ldr.raw_positions is not None:
+                raw_xyz = np.array(ldr.raw_positions, dtype=float)[::-1]  # Z,Y,X -> X,Y,Z
+            else:
+                raw_xyz = np.array([0.0, 0.0, 0.0], dtype=float)
+
+            # 取 global translate 並轉成原始解析度座標（乘以 factor[0]）
+            if getattr(ldr, "gloVolume_visuals", None) is not None and \
+               getattr(ldr.gloVolume_visuals, "transform", None) is not None:
+                t = np.array(ldr.translations, dtype=float)[:3]
+            else:
+                t = np.array([0.0, 0.0, 0.0], dtype=float)
+
+            factor0 = 1.0
+            if hasattr(ldr, "factor") and ldr.factor is not None and len(ldr.factor) > 0:
+                try:
+                    factor0 = float(ldr.factor[0])
+                except Exception:
+                    factor0 = 1.0
+
+            # 注意：transform.translate 的順序通常是 (x, y, z)
+            # 這裡已經使用 global 視圖 + factor0 → 代表原始解析度的世界座標位移
+            # trans_xyz = t * factor0
+
+            final_xyz = raw_xyz + t
+
+            rows.append([
+                int(vid),
+                f"{raw_xyz[0]:.6f}", f"{raw_xyz[1]:.6f}", f"{raw_xyz[2]:.6f}",
+                f"{final_xyz[0]:.6f}", f"{final_xyz[1]:.6f}", f"{final_xyz[2]:.6f}",
+            ])
+
+        # 寫檔
+        try:
+            with open(save_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    "id",
+                    "raw_pos_x", "raw_pos_y", "raw_pos_z",
+                    "final_pos_x", "final_pos_y", "final_pos_z",
+                ])
+                writer.writerows(rows)
+            print(f"Saved volume positions: {save_path} ({len(rows)} rows).")
+        except Exception as e:
+            print(f"Failed to save volume positions: {e}")
+
 
     def _start_monitor(self):
         self._timer = QTimer(self)

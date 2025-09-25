@@ -5,14 +5,17 @@
 import os
 import numpy as np
 
+
 def _load_block_memmap(file_dir: str, vol_path: str):
     if not vol_path or vol_path == "no_vol":
         return None
-    last = vol_path.split("/")[-1]
-    fp = os.path.join(file_dir, f"{vol_path}/{last}.npy")
+    last = os.path.basename(vol_path.rstrip("\\/"))
+    fp = os.path.join(file_dir, vol_path, f"{last}.npy")
+    fp = os.path.normpath(fp)
     if not os.path.exists(fp):
         return None
-    return np.load(fp, mmap_mode='r')
+    return np.load(fp, mmap_mode="r")
+
 
 def _infer_out_dtype(file_dir: str, vol_paths, fallback=None):
     dt = None

@@ -117,6 +117,9 @@ class SingleVolumeLOD:
         self.local_positions          = None             # Reserved for per-level local offsets
 
         self.vol_global_end_point = None  # List[np.ndarray] per level (global ends)
+        self.data_min = None
+        self.data_max = None
+
 
     def load_level0(self, path, level=0):
         self.max_level = get_max_lod_level(path)
@@ -134,7 +137,10 @@ class SingleVolumeLOD:
         npy_path = path
         # load and normalizing
         data = np.load(npy_path).astype(np.float32)
-        data = (data - data.min())/(data.max()-data.min())
+        self.data_min = float(data.min())
+        self.data_max = float(data.max())
+        print('[SingleVolumeLOD] factors: ', self.data_max, self.data_min)
+        # data = (data - data.min())/(data.max()-data.min())
 
 
         self.vol_size = np.array(data.shape, dtype=int)

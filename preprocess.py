@@ -202,7 +202,8 @@ def crop_original_data(item_list, image_shape, file_path, dtype, log, max_level,
                 filename = f"{len(xyz) - 1}_{xyz[-1]}"
                 print(save_path)
                 print(arr.shape)
-                np.save(os.path.join(file_path, f"{save_path}/{filename}.npy"), arr.astype(dtype))
+                np.save(os.path.join(file_path, save_path, f"{filename}.npy"), arr.astype(dtype))
+
         z_stack += z_stack_per_op
         gc.collect()
         if progress_cb:
@@ -223,15 +224,15 @@ def assemble_and_downscale(dir, dtype, log):
     items = os.listdir(dir)
     item_list = sorted([item for item in items if (".npy" not in item and ".txt" not in item)])
     xyz_list = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-    item0_path = os.path.join(dir, f"{item_list[0]}/{item_list[0]}.npy")
+    item0_path = os.path.join(dir, item_list[0], f"{item_list[0]}.npy")
     original_shape = np.array(np.load(item0_path).shape)
     arr = np.zeros(original_shape * 2, dtype=dtype)
     for i, item in enumerate(item_list):
-        arr_part = np.load(os.path.join(dir, f"{item}/{item}.npy")).astype(dtype)
+        arr_part = np.load(os.path.join(dir, item, f"{item}.npy")).astype(dtype)
         load_shape = xyz_list[i] * original_shape
         arr[load_shape[0]:load_shape[0]+original_shape[0], load_shape[1]:load_shape[1]+original_shape[1], load_shape[2]:load_shape[2]+original_shape[2]] = arr_part
     arr = block_reduce(arr, block_size=(2, 2, 2), func=np.max)
-    save_path = os.path.join(dir, dir.split("/")[-1])
+    save_path = os.path.join(dir, os.path.basename(dir))
     np.save(f"{save_path}.npy", arr.astype(dtype))
     # with open(f"{save_path}.txt", "w") as file:
     #     file.write(f"{data_coordinate}\n")

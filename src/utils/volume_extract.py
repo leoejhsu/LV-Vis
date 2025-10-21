@@ -167,5 +167,6 @@ def extract_volume_from_next_layer(self, center, vol_global_start_point, vol_glo
             print('[vol_extract] filled ROI directly, shape', out.shape, 'dtype', out.dtype)
             vol_global_start_point[layer + 1] = vol_start
             vol_global_end_point[layer + 1] = vol_end
+            print('[vol_extract] out intensity', out.max(), out.min())
             return out, vol_global_start_point, vol_global_end_point
 

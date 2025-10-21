@@ -194,7 +194,8 @@ class SingleVolumeLOD:
             raise ValueError(f"[render_level] Unexpected data shape: {data.shape}")
 
         MyNode = scene.visuals.create_visual_node(MyVisual)
-        vis = MyNode(data, parent=view.scene, threshold=threshold)
+        vis = MyNode(data, parent=view.scene, threshold=threshold, clim=(self.data_min, self.data_max))
+        # vis.set_data(data, (self.data_min, self.data_max), False)
         vis.transform = STTransform(translate=tuple(translate))
         vis.set_gl_state(
             blend=True,
@@ -210,7 +211,7 @@ class SingleVolumeLOD:
 
         # position canvas rendering
         PosNode = scene.visuals.create_visual_node(MyVolPosVisual)
-        pvis = PosNode(data, parent=view.scene, threshold=threshold)
+        pvis = PosNode(data, parent=view.scene, threshold=threshold, clim=(self.data_min, self.data_max))
         pvis.transform = STTransform(translate=tuple(translate))
         pvis.set_gl_state(
             blend=True,
